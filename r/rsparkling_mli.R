@@ -128,6 +128,11 @@ pred_sdf
 # Inspect Spark log directly
 spark_log(sc, n = 20)
 
+# PDP of model for PAY_0
+h2o.partialPlot(fit, test_hex, cols="PAY_0")
+
+# Shapley
+h2o.predict_contributions(fit, newdata = test_hex)
 
 # Now we disconnect from Spark, this will result in the H2OContext being stopped as
 # well since it's owned by the spark shell process used by our Spark connection:
