@@ -122,15 +122,20 @@ pred_hex
 pred_sdf <- as_spark_dataframe(sc, pred_hex)
 pred_sdf
 
-
 # Other useful functions:
 
 # Inspect Spark log directly
-spark_log(sc, n = 20)
+# spark_log(sc, n = 20)
 
 # H2O-3 machine learning interpretability (MLI):
+
 # PDP of model for PAY_0
 pdp_pay_0 <- h2o.partialPlot(fit, test_hex, cols = "PAY_0")
+
+# ICE for first row
+source("ice.R")
+ice_pay0_row1_frame <- get_ice_frame(test_hex[1,], as.h2o(pdp_pay_0$PAY_0), "PAY_0")
+ice_pay0_row_1 <- h2o.partialPlot(fit, ice_pay0_row1_frame, cols = "PAY_0")
 
 # Shapley
 shap <- h2o.predict_contributions(fit, newdata = test_hex)
