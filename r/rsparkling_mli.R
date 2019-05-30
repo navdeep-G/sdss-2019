@@ -137,8 +137,13 @@ source("ice.R")
 ice_pay0_row1_frame <- get_ice_frame(test_hex[1,], as.h2o(pdp_pay_0$PAY_0), "PAY_0")
 ice_pay0_row_1 <- h2o.partialPlot(fit, ice_pay0_row1_frame, cols = "PAY_0")
 
-# Shapley
+# Shapley across entire dataset
 shap <- h2o.predict_contributions(fit, newdata = test_hex)
+
+# Interpretable model(s) with H2O-3
+
+# GLM
+
 
 # Now we disconnect from Spark, this will result in the H2OContext being stopped as
 # well since it's owned by the spark shell process used by our Spark connection:
