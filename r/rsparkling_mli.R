@@ -52,28 +52,31 @@ h2o_flow(sc)
 
 # H2O with Spark DataFrames
 
-# Let's copy the mtcars dataset to to Spark as an example:
+# Read in creditcard train dataset to Spark as an example:
 library(dplyr)
-mtcars_tbl <- copy_to(sc, mtcars, overwrite = TRUE)
-mtcars_tbl
+train_tbl <- spark_read_csv(sc, "../data/CreditCard_Cat-train.csv")
+test_tbl <- spark_read_csv(sc, "../data/CreditCard_Cat-test.csv")
+train_tbl
+test_tbl
 
-# Convert the Spark DataFrame into an H2OFrame
-mtcars_hf <- as_h2o_frame(sc, mtcars_tbl)
-mtcars_hf
+# Convert the Spark DataFrame's into an H2OFrame's
+train_hex <- as_h2o_frame(sc, train_tbl)
+test_hex <- as_h2o_frame(sc, test_tbl)
+train_hex
+test_hex
 
-
-# Split the mtcars H2O Frame into train & test sets
-splits <- h2o.splitFrame(mtcars_hf, ratios = 0.7, seed = 1)
-nrow(splits[[1]])  # nrows in train
-nrow(splits[[2]])  # nrows in test
+# Split the H2O Frame into train & test sets
+#splits <- h2o.splitFrame(train_hex, ratios = 0.7, seed = 1)
+#nrow(splits[[1]])  # nrows in train
+#nrow(splits[[2]])  # nrows in test
 
 # Train an H2O Gradient Boosting Machine (GBM)
 # And perform 3-fold cross-validation via `nfolds`
-y <- "mpg"
-x <- setdiff(names(mtcars_hf), y)
+y <- "DEFAULT_PAYMENT_NEXT_MONTH"
+x <- setdiff(names(train_hex), y)
 fit <- h2o.gbm(x = x,
                y = y,
-               training_frame = splits[[1]],
+               training_frame = train_hex,
                nfolds = 3,
                min_rows = 1,
                seed = 1)
@@ -82,7 +85,7 @@ fit <- h2o.gbm(x = x,
 h2o.performance(fit, xval = TRUE)
 
 # As a comparison, we can evaluate performance on a test set
-h2o.performance(fit, newdata = splits[[2]])
+h2o.performance(fit, newdata = test_hex)
 
 # Note: Since this is a very small data problem,
 # we see a reasonable difference between CV and
@@ -90,11 +93,11 @@ h2o.performance(fit, newdata = splits[[2]])
 
 
 # Now, generate the predictions (as opposed to metrics)
-pred_hf <- h2o.predict(fit, newdata = splits[[2]])
-pred_hf
+pred_hex <- h2o.predict(fit, newdata = test_hex)
+pred_hex
 
 # If we want these available in Spark:
-pred_sdf <- as_spark_dataframe(sc, pred_hf)
+pred_sdf <- as_spark_dataframe(sc, pred_hex)
 pred_sdf
 
 
