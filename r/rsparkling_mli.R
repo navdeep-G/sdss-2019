@@ -87,10 +87,6 @@ h2o.performance(fit, xval = TRUE)
 # As a comparison, we can evaluate performance on a test set
 h2o.performance(fit, newdata = test_hex)
 
-# Note: Since this is a very small data problem,
-# we see a reasonable difference between CV and
-# test set metrics
-
 
 # Now, generate the predictions (as opposed to metrics)
 pred_hex <- h2o.predict(fit, newdata = test_hex)
