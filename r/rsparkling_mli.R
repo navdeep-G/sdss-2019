@@ -84,7 +84,7 @@ test_hex$PAY_4 = as.factor(test_hex$PAY_4)
 test_hex$PAY_5 = as.factor(test_hex$PAY_5)
 test_hex$PAY_6 = as.factor(test_hex$PAY_6)
 
-# Split the H2O Frame train and validation
+# Split the H2O Frame into train and validation
 splits <- h2o.splitFrame(train_hex, ratios = 0.7, seed = 12345)
 nrow(splits[[1]])  # nrows in train
 nrow(splits[[2]])  # nrows in validation
@@ -92,7 +92,7 @@ nrow(splits[[2]])  # nrows in validation
 # Train an H2O Gradient Boosting Machine (GBM)
 # And perform 3-fold cross-validation via `nfolds`
 y <- "DEFAULT_PAYMENT_NEXT_MONTH"
-x <- setdiff(names(train_hex), y)
+x <- setdiff(names(train_hex), c("ID", y)) # Do not use ID column
 fit <- h2o.gbm(x = x,
                y = y,
                ntrees = 150, # maximum 150 trees in GBM
@@ -104,7 +104,7 @@ fit <- h2o.gbm(x = x,
                score_tree_interval = 1,  # for reproducibility, set higher for bigger data
                training_frame = splits[[1]], # training frame
                validation_frame = splits[[2]], # validation frame
-               seed = 12345 # Seed for reproducibility
+               seed = 12345 # Seed for reproducibility,
                ) 
 
 # Evaluate model performance on validation:
