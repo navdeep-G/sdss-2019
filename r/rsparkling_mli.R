@@ -54,8 +54,8 @@ h2o_flow(sc)
 
 # Read in creditcard train dataset to Spark as an example:
 library(dplyr)
-train_tbl <- spark_read_csv(sc, "../data/CreditCard_Cat-train.csv")
-test_tbl <- spark_read_csv(sc, "../data/CreditCard_Cat-test.csv")
+train_tbl <- spark_read_csv(sc, "../data/creditcard-train.csv")
+test_tbl <- spark_read_csv(sc, "../data/creditcard-test.csv")
 train_tbl
 test_tbl
 
