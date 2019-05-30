@@ -1,3 +1,8 @@
+# Logs to ignore
+r/derby.log
+r/h2ologs/
+r/logs/
+
 # History files
 .Rhistory
 .Rapp.history
