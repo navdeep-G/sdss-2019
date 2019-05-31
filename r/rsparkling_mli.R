@@ -101,7 +101,6 @@ fit_gbm <- h2o.gbm(x = x,
                max_depth = 4, # trees can have maximum depth of 4
                sample_rate = 0.9, # use 90% of rows in each iteration (tree)
                col_sample_rate = 0.9, # use 90% of variables in each iteration (tree)
-               #balance_classes = TRUE, # sample to balance 0/1 distribution of target
                stopping_rounds = 5,  # stop if validation error does not decrease for 5 iterations (trees)
                score_tree_interval = 1,  # for reproducibility, set higher for bigger data
                training_frame = splits[[1]], # training frame
