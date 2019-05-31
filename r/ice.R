@@ -1,4 +1,4 @@
-get_ice_frame <- function(record, col_data, column){
+get_ice_frame <- function(record, col_data, column) {
   
   # Add type checking...
   
@@ -7,10 +7,10 @@ get_ice_frame <- function(record, col_data, column){
   
   col_data_df <- as.data.frame(col_data)
   
-  if(is_numeric){
+  if(is_numeric) {
     # Calculate quantiles if column is numeric
     new_values <- quantile(col_data_df[[column]], probs = seq(0, 1, 0.1))
-  } else{
+  } else {
     # Get unique values if column is categorical
     new_values <- unique(col_data_df)
   }
@@ -19,7 +19,7 @@ get_ice_frame <- function(record, col_data, column){
   
   # Create records with range of values
   perturbed_records <- record
-  for(i in c(2:nrow(new_values))){
+  for(i in c(2:nrow(new_values))) {
     perturbed_records <- h2o.rbind(perturbed_records, record)
   }
   

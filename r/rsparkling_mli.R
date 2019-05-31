@@ -27,6 +27,7 @@
 #install.packages("sparklyr")
 #install.packages("rsparkling")
 
+
 library(sparklyr)
 library(h2o)
 
@@ -89,61 +90,107 @@ splits <- h2o.splitFrame(train_hex, ratios = 0.7, seed = 12345)
 nrow(splits[[1]])  # nrows in train
 nrow(splits[[2]])  # nrows in validation
 
-# Train an H2O Gradient Boosting Machine (GBM)
-# And perform 3-fold cross-validation via `nfolds`
+# Set up input and output for modelling
 y <- "DEFAULT_PAYMENT_NEXT_MONTH"
 x <- setdiff(names(train_hex), c("ID", y)) # Do not use ID column
-fit <- h2o.gbm(x = x,
+
+# Train an H2O Gradient Boosting Machine (GBM)
+fit_gbm <- h2o.gbm(x = x,
                y = y,
                ntrees = 150, # maximum 150 trees in GBM
                max_depth = 4, # trees can have maximum depth of 4
                sample_rate = 0.9, # use 90% of rows in each iteration (tree)
                col_sample_rate = 0.9, # use 90% of variables in each iteration (tree)
-               balance_classes = TRUE, # sample to balance 0/1 distribution of target
+               #balance_classes = TRUE, # sample to balance 0/1 distribution of target
                stopping_rounds = 5,  # stop if validation error does not decrease for 5 iterations (trees)
                score_tree_interval = 1,  # for reproducibility, set higher for bigger data
                training_frame = splits[[1]], # training frame
                validation_frame = splits[[2]], # validation frame
-               seed = 12345 # Seed for reproducibility,
+               seed = 12345 # seed for reproducibility,
                ) 
 
-# Evaluate model performance on validation:
-h2o.performance(fit, valid = TRUE)
+# Evaluate model performance on validation set:
+h2o.performance(fit_gbm, valid = TRUE)
 
 # As a comparison, we can evaluate performance on a test set
-h2o.performance(fit, newdata = test_hex)
-
+h2o.performance(fit_gbm, newdata = test_hex)
 
 # Now, generate the predictions (as opposed to metrics)
-pred_hex <- h2o.predict(fit, newdata = test_hex)
-pred_hex
+pred_gbm_hex <- h2o.predict(fit_gbm, newdata = test_hex)
+pred_gbm_hex
 
 # If we want these available in Spark:
-pred_sdf <- as_spark_dataframe(sc, pred_hex)
-pred_sdf
+pred_gbm_sdf <- as_spark_dataframe(sc, pred_gbm_hex)
+pred_gbm_sdf
 
 # Other useful functions:
 
 # Inspect Spark log directly
 # spark_log(sc, n = 20)
 
+######################################################################################################################
 # H2O-3 machine learning interpretability (MLI):
 
-# PDP of model for PAY_0
-pdp_pay_0 <- h2o.partialPlot(fit, test_hex, cols = "PAY_0")
+# Use PDP/ICE on GBM model to view model behavior globally (PDP) and locally (ICE)
 
-# ICE for first row
+# PDP for variable "PAY_0"
+pdp_gbm_pay0 <- h2o.partialPlot(fit_gbm, test_hex, cols = "PAY_0")
+
+# ICE
 source("ice.R")
-ice_pay0_row1_frame <- get_ice_frame(test_hex[1,], as.h2o(pdp_pay_0$PAY_0), "PAY_0")
-ice_pay0_row_1 <- h2o.partialPlot(fit, ice_pay0_row1_frame, cols = "PAY_0")
+# ICE for first row in test set and "PAY_0"
+ice_pay0_row1_frame <- get_ice_frame(test_hex[1,], h2o.unique(test_hex$PAY_0), "PAY_0")
+ice_gbm_pay0_row1 <- h2o.partialPlot(fit_gbm, ice_pay0_row1_frame, cols = "PAY_0")
 
-# Shapley across entire dataset
-shap <- h2o.predict_contributions(fit, newdata = test_hex)
+# Use Shapley to get reason codes on a per row basis
+contributions <- h2o.predict_contributions(fit_gbm, test_hex)
+
+# Helper function to ensure sum of Shapley match prediction after applying inverse link function for binomial 
+# classification
+sigmoid <- function(x) {
+  1 / (1 + exp(-x))
+}
+
+# Check if sum of Shapley values after sigmoid transform match predicted outcome for same test set
+p1_using_contributions <- sigmoid(as.data.frame(h2o.sum(contributions, axis=1, return_frame = T)))
+head(pred_gbm_hex$p1)
+head(p1_using_contributions)
 
 # Interpretable model(s) with H2O-3
 
-# GLM
+# Train an H2O Generalized Linear Model (GLM)
+fit_glm <- h2o.glm(x = x,
+                   y = y,
+                   family = "binomial", # need to set "family" for H2O-3 GLM, which is "binomial" for classification
+                   training_frame = splits[[1]], # training frame
+                   validation_frame = splits[[2]], # validation frame
+                   seed = 12345 # seed for reproducibility,
+)
 
+# Evaluate model performance on validation set:
+h2o.performance(fit_glm, valid = TRUE)
+
+# As a comparison, we can evaluate performance on a test set
+h2o.performance(fit_glm, newdata = test_hex)
+
+# Now, generate the predictions (as opposed to metrics)
+pred_glm_hex <- h2o.predict(fit_glm, newdata = test_hex)
+pred_glm_hex
+
+# If we want these available in Spark:
+pred_glm_sdf <- as_spark_dataframe(sc, pred_glm_hex)
+pred_glm_sdf
+
+# We can still look at PDP/ICE for GLM to view model behavior globally (PDP) and locally (ICE)
+
+# PDP for variable "PAY_0"
+pdp_glm_pay0 <- h2o.partialPlot(fit_glm, test_hex, cols = "PAY_0")
+
+# ICE
+source("ice.R")
+# ICE for first row in test set and "PAY_0"
+ice_pay0_row1_frame <- get_ice_frame(test_hex[1,], h2o.unique(test_hex$PAY_0), "PAY_0")
+ice_glm_pay0_row1 <- h2o.partialPlot(fit_glm, ice_pay0_row1_frame, cols = "PAY_0")
 
 # Now we disconnect from Spark, this will result in the H2OContext being stopped as
 # well since it's owned by the spark shell process used by our Spark connection:
