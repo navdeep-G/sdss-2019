@@ -3,6 +3,8 @@ r/derby.log
 r/h2ologs/
 r/logs/
 
+presentation/*.pptx
+
 # History files
 .Rhistory
 .Rapp.history
