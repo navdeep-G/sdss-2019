@@ -5,6 +5,7 @@
 #install.packages("digest")
 #install.packages("devtools")
 #install.packages("dplyr")
+#install.packages("data.tree") # For surrogate models
 #
 # Install the latest version of h2o:
 # The following two commands remove any previously installed H2O packages for R.
@@ -191,6 +192,41 @@ source("ice.R")
 # ICE for first row in test set and "PAY_0"
 ice_pay0_row1_frame <- get_ice_frame(test_hex[1,], h2o.unique(test_hex$PAY_0), "PAY_0")
 ice_glm_pay0_row1 <- h2o.partialPlot(fit_glm, ice_pay0_row1_frame, cols = "PAY_0")
+
+# Surrogate model with random forest
+
+# Bind predictions from test set to test_hex
+y <- "p1"
+x <- setdiff(names(train_hex), c("ID", y, "DEFAULT_PAYMENT_NEXT_MONTH")) # Do not use ID column
+test_hex_yhat <- h2o.cbind(test_hex, pred_gbm_hex$p1)
+
+rf_surrogate <- h2o.randomForest(x=x,
+                                 y=y,
+                                 ntrees=1,          # use only one tree
+                                 sample_rate=1,     # use all rows in that tree
+                                 mtries=-2,         # use all columns in that tree
+                                 max_depth=3,       # shallow trees are easier to understand
+                                 seed=12345,         # random seed for reproducibility,
+                                 training_frame = test_hex_yhat
+                                 )
+source("viz_tree.R")
+rf_h2o_surrogate_tree = h2o.getModelTree(model = rf_surrogate, tree_number = 1)
+rf_data_tree = createDataTree(rf_h2o_surrogate_tree)
+GetEdgeLabel <- function(node) {return (node$edgeLabel)}
+GetNodeShape <- function(node) {switch(node$type, 
+                                       split = "diamond", leaf = "oval")}
+GetFontName <- function(node) {switch(node$type, 
+                                      split = 'Palatino-bold', 
+                                      leaf = 'Palatino')}
+SetEdgeStyle(rf_data_tree, fontname = 'Palatino-italic', 
+             label = GetEdgeLabel, labelfloat = TRUE,
+             fontsize = "26", fontcolor='royalblue4')
+SetNodeStyle(rf_data_tree, fontname = GetFontName, shape = GetNodeShape, 
+             fontsize = "26", fontcolor='royalblue4',
+             height="0.75", width="1")
+
+SetGraphStyle(rf_data_tree, rankdir = "LR", dpi=70.)
+plot(rf_data_tree, output = "graph")
 
 # Now we disconnect from Spark, this will result in the H2OContext being stopped as
 # well since it's owned by the spark shell process used by our Spark connection:
