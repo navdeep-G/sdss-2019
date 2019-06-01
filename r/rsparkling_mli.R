@@ -108,18 +108,6 @@ fit_gbm <- h2o.gbm(x = x,
                seed = 12345 # seed for reproducibility,
                ) 
 
-# Display global variable importance
-# During training, the h2o GBM aggregates the improvement in error caused by each split in each 
-# decision tree across all the decision trees in the ensemble classifier. These values are 
-# attributed to the input variable used in each split and give an indication of the contribution 
-# each input variable makes toward the model's predictions. The variable importance ranking should 
-# be parsimonious with human domain knowledge and reasonable expectations. 
-# In this case, a customer's most recent payment behavior, PAY_0, is by far the most important variable 
-# followed by their second most recent payment, PAY_2, and third most recent payment, PAY_3, behavior. 
-# This result is well-aligned with business practices in credit lending: people who miss their most recent 
-# payments are likely to default soon.
-h2o.varimp_plot(fit_gbm)
-
 # Evaluate model performance on validation set:
 h2o.performance(fit_gbm, valid = TRUE)
 
@@ -137,6 +125,19 @@ pred_gbm_sdf
 ######################################################################################################################
 # H2O-3 machine learning interpretability (MLI):
 #
+# Obtain and display global variable importance
+# 
+# During training, the h2o GBM aggregates the improvement in error caused by each split in each 
+# decision tree across all the decision trees in the ensemble classifier. These values are 
+# attributed to the input variable used in each split and give an indication of the contribution 
+# each input variable makes toward the model's predictions. The variable importance ranking should 
+# be parsimonious with human domain knowledge and reasonable expectations. 
+# In this case, a customer's most recent payment behavior, PAY_0, is by far the most important variable 
+# followed by their second most recent payment, PAY_2, and third most recent payment, PAY_3, behavior. 
+# This result is well-aligned with business practices in credit lending: people who miss their most recent 
+# payments are likely to default soon.
+h2o.varimp_plot(fit_gbm)
+
 # Train a decision tree surrogate model to describe GBM
 # 
 # A surrogate model is a simple model that is used to explain a complex model. One of the original references 
@@ -223,6 +224,7 @@ ice_pay0_row1_frame <- get_ice_frame(test_hex[1,], h2o.unique(test_hex$PAY_0), "
 ice_gbm_pay0_row1 <- h2o.partialPlot(fit_gbm, ice_pay0_row1_frame, cols = "PAY_0")
 
 # Generate reason codes using the Shapley method
+# 
 # Shapley explanations will be used to calculate the local variable importance for any one prediction: 
 # http://papers.nips.cc/paper/7062-a-unified-approach-to-interpreting-model-predictions. 
 # Shapley explanations are the only possible consistent local variable importance values. (Here consistency means 
@@ -255,7 +257,8 @@ p1_using_contributions <- sigmoid(as.data.frame(h2o.sum(contributions, axis=1, r
 head(pred_gbm_hex$p1)
 head(p1_using_contributions)
 
-# Interpretable model(s) with H2O-3
+# Train interpretable model(s) with H2O-3
+# 
 # The previous methods are quite helpful in interpreting complex models (tree based models, neural nets, etc.).
 # However, one can still rely on directly interpretable models for their machine learning endeavors (GLM, GAM, etc.)
 # Below we show a way to build an interpretable model in H2O-3
